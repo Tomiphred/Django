@@ -88,7 +88,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "us-east-1"
         run: |
-          eb init phred --region $AWS_REGION
+          eb init phred --region $AWS_REGION --platform "python-3.8" --profile default
           eb use phred.env
           eb deploy phred.env --region $AWS_REGION
 
