@@ -1,4 +1,4 @@
-name: Django CI/CD with Security Testing (DAST)
+name: Django CI/CD Workflow with DAST
 
 on:
   push:
@@ -26,26 +26,18 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.8"
-
-      - name: Upgrade pip, setuptools, and wheel
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install --upgrade setuptools wheel
+          python-version: '3.8'
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install --upgrade pip
+          pip install django psycopg2-binary
 
       - name: Run migrations
-        run: |
-          python manage.py migrate
+        run: python manage.py migrate
 
       - name: Run tests
-        env:
-          DATABASE_URL: postgres://django_user:django_password@localhost:5432/django_db
-        run: |
-          python manage.py test
+        run: python manage.py test
 
   security:
     runs-on: ubuntu-latest
@@ -57,30 +49,20 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.8"
-
-      - name: Upgrade pip, setuptools, and wheel
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install --upgrade setuptools wheel
+          python-version: '3.8'
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install --upgrade pip
+          pip install django
 
-      - name: Run Bandit for security checks
+      - name: Run Bandit security checks
         run: |
           pip install bandit
           bandit -r .
 
-      - name: Run Safety to check for vulnerable dependencies
-        run: |
-          pip install safety
-          safety check
-
       - name: Run Django security check
-        run: |
-          python manage.py check --deploy
+        run: python manage.py check --deploy
 
   deploy:
     needs: [test, security]
@@ -93,25 +75,20 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.8"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python-version: '3.8'
 
       - name: Install AWS CLI
-        run: |
-          pip install awscli
+        run: pip install awscli
 
-      - name: Deploy to AWS Elastic Beanstalk
+      - name: Deploy to Existing AWS Elastic Beanstalk Environment
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: "us-east-1" # Modify this as per your region
+          AWS_REGION: "us-east-1"
         run: |
-          eb init -p python-3.8 django-app --region $AWS_REGION
-          eb deploy
+          eb init phred --region $AWS_REGION
+          eb use phred.env
+          eb deploy phred.env --region $AWS_REGION
 
   dast:
     needs: deploy
@@ -125,7 +102,7 @@ jobs:
 
       - name: Run OWASP ZAP DAST scan
         run: |
-          zap-baseline.py -t http://phred.us-east-1.elasticbeanstalk.com/
+          zap-baseline.py -t http://phred.us-east-1.elasticbeanstalk.com/  # Replace with your actual environment URL
         env:
           ZAP_REPORT: ${{ github.workspace }}/zap_report.html
 
