@@ -80,25 +80,18 @@ jobs:
       - name: Install AWS CLI
         run: |
             pip install awscli
+            pip install awscli
             pip install awsebcli
 
-      - name: Generate Version Label
-        id: version_label
-        run: echo "VERSION_LABEL=$(date +'%Y%m%d%H%M%S')-${{ github.sha }}" >> $GITHUB_ENV
-
-      - name: Generate deployment package
-        run: zip -r deploy.zip . -x '*.git*'      
-
-      - name: Deploy to EB
-        uses: einaregilsson/beanstalk-deploy@v20
-        with:
-            aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-            aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            application_name: phred
-            environment_name: phred-env
-            version_label: ${{VERSION_LABEL}}
-            region: us-east-1
-            deployment_package: deploy.zip
+      - name: Deploy to Existing AWS Elastic Beanstalk Environment
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "us-east-1"
+        run: |
+          eb init phred --region $AWS_REGION
+          eb use phred.env
+          eb deploy phred.env --region $AWS_REGION
 
   dast:
     needs: deploy
